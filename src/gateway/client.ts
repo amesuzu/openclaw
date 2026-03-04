@@ -398,7 +398,25 @@ export class GatewayClient {
         if (parsed.ok) {
           pending.resolve(parsed.payload);
         } else {
-          pending.reject(new Error(parsed.error?.message ?? "unknown error"));
+          const err = new Error(parsed.error?.message ?? "unknown error") as Error & {
+            code?: string;
+            gatewayError?: unknown;
+            retryable?: boolean;
+            retryAfterMs?: number;
+          };
+          if (parsed.error?.code) {
+            err.code = parsed.error.code;
+          }
+          if (parsed.error) {
+            err.gatewayError = parsed.error;
+          }
+          if (typeof parsed.error?.retryable === "boolean") {
+            err.retryable = parsed.error.retryable;
+          }
+          if (typeof parsed.error?.retryAfterMs === "number") {
+            err.retryAfterMs = parsed.error.retryAfterMs;
+          }
+          pending.reject(err);
         }
       }
     } catch (err) {
